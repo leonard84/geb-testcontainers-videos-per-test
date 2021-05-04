@@ -15,12 +15,19 @@ import spock.lang.Stepwise
 class VncRecordingInterceptor implements IMethodInterceptor, SafeFileName {
     TestcontainersWebDriver container
 
+
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
         switch (invocation.method.kind) {
-            case MethodKind.FEATURE:
-                interceptFeatureExecution(invocation)
+        // this is around setup-feature-cleanup so it runs before setup methods
+            case MethodKind.ITERATION_EXECUTION:
+                interceptIterationExecution(invocation)
                 break
+                // this is the actual feature method, we only get access to an exception here
+            case MethodKind.FEATURE:
+                interceptFeatureMethodExecution(invocation)
+                break
+                // this is at the end of the spec
             case MethodKind.CLEANUP_SPEC:
                 interceptCleanupSpecExecution(invocation)
                 break
@@ -29,15 +36,16 @@ class VncRecordingInterceptor implements IMethodInterceptor, SafeFileName {
         }
     }
 
-    void interceptCleanupSpecExecution(IMethodInvocation invocation) throws Throwable {
-        if (container) {
-            // save for spec in case the Spec was ordered and didn't fail before
-            container.retainRecordingIfNeeded(getFilesystemFriendlyName(invocation.spec.name), true)
-        }
+    void interceptIterationExecution(IMethodInvocation invocation) throws Throwable {
+        GebTestManager testManager = (invocation.instance as ManagedGebTest).testManager
+        Browser browser = testManager.browser
+        container = (browser.driver as TestcontainersWebDriver)
+
+        container.startRecording()
         invocation.proceed()
     }
 
-    void interceptFeatureExecution(IMethodInvocation invocation) throws Throwable {
+    void interceptFeatureMethodExecution(IMethodInvocation invocation) throws Throwable {
         GebTestManager testManager = (invocation.instance as ManagedGebTest).testManager
         Browser browser = testManager.browser
         container = (browser.driver as TestcontainersWebDriver)
@@ -57,6 +65,14 @@ class VncRecordingInterceptor implements IMethodInterceptor, SafeFileName {
         if (!ordered) {
             container.retainRecordingIfNeeded(prefix, true).ifPresent { addRecordingAttachment(invocation, container.reportDir, it) }
         }
+    }
+
+    void interceptCleanupSpecExecution(IMethodInvocation invocation) throws Throwable {
+        if (container) {
+            // save for spec in case the Spec was ordered and didn't fail before
+            container.retainRecordingIfNeeded(getFilesystemFriendlyName(invocation.spec.name), true)
+        }
+        invocation.proceed()
     }
 
     private static void addRecordingAttachment(IMethodInvocation invocation, File reportDir, File video) {

@@ -13,8 +13,12 @@ class VncRecordingExtension implements IGlobalExtension {
     @Override
     void visitSpec(SpecInfo spec) {
         if (ManagedGebTest.isAssignableFrom(spec.reflection) && testContainers) {
+            // when upgrading to Spock 2.0 set spec executionMode to SAME_THREAD as this is stateful
             VncRecordingInterceptor interceptor = new VncRecordingInterceptor()
-            spec.bottomSpec.allFeatures*.featureMethod*.addInterceptor(interceptor)
+            spec.bottomSpec.allFeatures.each {
+                it.addIterationInterceptor(interceptor)
+                it.featureMethod.addInterceptor(interceptor)
+            }
             spec.bottomSpec.addCleanupSpecInterceptor(interceptor)
         }
     }
