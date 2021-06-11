@@ -3,6 +3,7 @@ import static org.testcontainers.containers.BrowserWebDriverContainer.VncRecordi
 import static org.testcontainers.containers.BrowserWebDriverContainer.VncRecordingMode.RECORD_FAILING
 import static org.testcontainers.shaded.org.apache.commons.io.FileUtils.ONE_GB
 
+import org.gebish.actionlog.ActionLogInjector
 import org.gebish.example.TestcontainersWebDriver
 import org.testcontainers.containers.BrowserWebDriverContainer
 import org.testcontainers.containers.BrowserWebDriverContainer.VncRecordingMode
@@ -28,3 +29,8 @@ driver = {
                     RECORD_FAILING :
                     RECORD_ALL)
 }
+
+ActionLogInjector.configure(
+        screenshotOn: ['before:click()', 'after:click()', 'after:value(String)'],
+        includeTimestamps: true
+)
